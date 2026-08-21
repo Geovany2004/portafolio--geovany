@@ -1,0 +1,8 @@
+# Word temporary files
+~$*.docx
+~$*.doc
+
+# OS files
+Thumbs.db
+desktop.ini
+.DS_Store
