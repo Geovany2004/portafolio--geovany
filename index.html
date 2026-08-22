@@ -440,19 +440,76 @@
     .skill-groups{ grid-template-columns: 1fr; gap: 18px; }
   }
 
-  /* ---------- PROJECTS ---------- */
+  /* ---------- PROJECTS SLIDER / CAROUSEL ---------- */
+  .projects-title-group {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .slider-controls {
+    display: inline-flex;
+    gap: 8px;
+  }
+  .slider-arrow {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(11, 17, 32, 0.8);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-size: 16px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.25s ease;
+  }
+  .slider-arrow:hover {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #ffffff;
+    box-shadow: 0 4px 14px rgba(59, 110, 255, 0.35);
+    transform: translateY(-2px);
+  }
+
   .projects-wrapper {
     display: flex;
-    flex-direction: column;
-    gap: 32px;
+    flex-direction: row;
+    gap: 24px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+    padding-bottom: 18px;
+    padding-top: 8px;
+    -webkit-overflow-scrolling: touch;
   }
+  .projects-wrapper::-webkit-scrollbar {
+    height: 6px;
+  }
+  .projects-wrapper::-webkit-scrollbar-track {
+    background: rgba(11, 17, 32, 0.8);
+    border-radius: 10px;
+  }
+  .projects-wrapper::-webkit-scrollbar-thumb {
+    background: rgba(59, 110, 255, 0.4);
+    border-radius: 10px;
+  }
+  .projects-wrapper::-webkit-scrollbar-thumb:hover {
+    background: var(--accent);
+  }
+
   .project-card {
+    flex: 0 0 520px;
+    max-width: 85vw;
+    scroll-snap-align: start;
     background: #0B1120;
     border: 1px solid #1D2A45;
     border-radius: var(--radius);
     overflow: hidden;
     transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    display: flex;
+    flex-direction: column;
   }
   .project-card:hover {
     transform: translateY(-5px);
@@ -462,11 +519,12 @@
 
   .project-banner {
     width: 100%;
-    aspect-ratio: 16 / 8;
+    aspect-ratio: 16 / 8.5;
     overflow: hidden;
     background: #050810;
     border-bottom: 1px solid #1D2A45;
     position: relative;
+    flex-shrink: 0;
   }
   .project-banner img {
     width: 100%;
@@ -481,8 +539,12 @@
   }
 
   .project-content {
-    padding: 28px 32px;
+    padding: 24px 28px;
     background: #0B1120;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    justify-content: space-between;
   }
 
   .project-top{
@@ -494,7 +556,7 @@
   }
   .project-name{
     font-family: var(--serif);
-    font-size: 22px;
+    font-size: 21px;
     font-weight: 500;
     color: var(--text);
     margin: 0;
@@ -510,7 +572,7 @@
     color: var(--text-muted);
     font-size: 14.5px;
     line-height: 1.65;
-    margin-bottom: 22px;
+    margin-bottom: 20px;
   }
 
   .project-meta{
@@ -519,6 +581,7 @@
     justify-content: space-between;
     gap: 16px;
     flex-wrap: wrap;
+    padding-top: 6px;
   }
   .project-stack{ display:flex; gap:8px; flex-wrap:wrap; }
   .stack-pill{
@@ -1135,11 +1198,17 @@
 <section class="section" id="proyectos">
   <div class="container">
     <div class="section-head">
-      <h2 class="section-title">Proyectos seleccionados</h2>
+      <div class="projects-title-group">
+        <h2 class="section-title">Proyectos seleccionados</h2>
+        <div class="slider-controls">
+          <button class="slider-arrow" onclick="scrollProjects(-1)" aria-label="Proyecto Anterior" title="Anterior">&larr;</button>
+          <button class="slider-arrow" onclick="scrollProjects(1)" aria-label="Proyecto Siguiente" title="Siguiente">&rarr;</button>
+        </div>
+      </div>
       <span class="section-num">02</span>
     </div>
 
-    <div class="projects-wrapper">
+    <div class="projects-wrapper" id="projectsWrapper">
       <div class="project-card fade-in">
         <div class="project-banner">
           <img src="Capturas de proyectos reales/NOVA ESENCIA.png" alt="Captura de Nova Esencia" loading="lazy">
@@ -1585,6 +1654,17 @@
     showToast(`Iniciando descarga del CV en ${lang}...`);
     const dropdown = document.getElementById('cvDropdown');
     if (dropdown) dropdown.classList.remove('active');
+  }
+
+  // Desplazamiento Horizontal del Slider de Proyectos
+  function scrollProjects(direction) {
+    const wrapper = document.getElementById('projectsWrapper');
+    if (!wrapper) return;
+    const cardWidth = wrapper.querySelector('.project-card')?.offsetWidth || 400;
+    wrapper.scrollBy({
+      left: direction * (cardWidth + 24),
+      behavior: 'smooth'
+    });
   }
 
   document.addEventListener('click', (e) => {
