@@ -2027,8 +2027,8 @@
     document.getElementById('contactForm').reset();
   }
 
-  // Fondo de Partículas Neón Interactivo (Canvas)
-  (function initBgCanvas() {
+  // Fondo 3D Interactivo con Perspectiva y Parallax
+  (function init3DBgCanvas() {
     const canvas = document.getElementById('bgCanvas');
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -2040,77 +2040,112 @@
       height = canvas.height = window.innerHeight;
     });
 
-    const particles = [];
-    const numParticles = Math.min(45, Math.floor(width / 28));
+    const fov = 420; // Focal length / Campo de visión 3D
+    const numPoints = Math.min(75, Math.floor(width / 16));
+    const points = [];
 
-    class Particle {
+    let targetRotX = 0;
+    let targetRotY = 0;
+    let currentRotX = 0;
+    let currentRotY = 0;
+
+    class Point3D {
       constructor() {
-        this.x = Math.random() * width;
-        this.y = Math.random() * height;
-        this.vx = (Math.random() - 0.5) * 0.6;
-        this.vy = (Math.random() - 0.5) * 0.6;
-        this.radius = Math.random() * 1.8 + 1;
+        this.x = (Math.random() - 0.5) * 1600;
+        this.y = (Math.random() - 0.5) * 1600;
+        this.z = (Math.random() - 0.5) * 1200;
+        this.vx = (Math.random() - 0.5) * 0.7;
+        this.vy = (Math.random() - 0.5) * 0.7;
+        this.vz = (Math.random() - 0.5) * 0.7;
+        this.baseRadius = Math.random() * 2.2 + 1.2;
       }
       update() {
         this.x += this.vx;
         this.y += this.vy;
-        if (this.x < 0 || this.x > width) this.vx *= -1;
-        if (this.y < 0 || this.y > height) this.vy *= -1;
+        this.z += this.vz;
+
+        if (this.x < -800 || this.x > 800) this.vx *= -1;
+        if (this.y < -800 || this.y > 800) this.vy *= -1;
+        if (this.z < -600 || this.z > 600) this.vz *= -1;
       }
-      draw() {
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-        ctx.fillStyle = '#3B6EFF';
-        ctx.fill();
+      project(rotX, rotY) {
+        // Inclinación 3D según la posición del puntero (Parallax 3D)
+        const cosX = Math.cos(rotX), sinX = Math.sin(rotX);
+        const cosY = Math.cos(rotY), sinY = Math.sin(rotY);
+
+        let x1 = this.x * cosY - this.z * sinY;
+        let z1 = this.z * cosY + this.x * sinY;
+
+        let y1 = this.y * cosX - z1 * sinX;
+        let z2 = z1 * cosX + this.y * sinX;
+
+        const depth = z2 + 800; // Distancia focal
+        const scale = fov / Math.max(100, depth);
+
+        return {
+          px: width / 2 + x1 * scale,
+          py: height / 2 + y1 * scale,
+          scale: scale,
+          depth: depth
+        };
       }
     }
 
-    for (let i = 0; i < numParticles; i++) {
-      particles.push(new Particle());
+    for (let i = 0; i < numPoints; i++) {
+      points.push(new Point3D());
     }
 
-    let mouse = { x: null, y: null };
     window.addEventListener('mousemove', (e) => {
-      mouse.x = e.clientX;
-      mouse.y = e.clientY;
+      targetRotY = (e.clientX - width / 2) * 0.00035;
+      targetRotX = (e.clientY - height / 2) * 0.00035;
     });
 
     function animate() {
       ctx.clearRect(0, 0, width, height);
 
-      for (let i = 0; i < particles.length; i++) {
-        particles[i].update();
-        particles[i].draw();
+      // Interpolación suave (lerp) para la inclinación 3D
+      currentRotX += (targetRotX - currentRotX) * 0.06;
+      currentRotY += (targetRotY - currentRotY) * 0.06;
 
-        for (let j = i + 1; j < particles.length; j++) {
-          const dx = particles[i].x - particles[j].x;
-          const dy = particles[i].y - particles[j].y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
+      const projected = points.map(p => {
+        p.update();
+        return { point: p, ...p.project(currentRotX, currentRotY) };
+      });
 
-          if (dist < 120) {
+      // Conexiones 3D entre nodos según proximidad tridimensional
+      for (let i = 0; i < projected.length; i++) {
+        const p1 = projected[i];
+        if (p1.px < -60 || p1.px > width + 60 || p1.py < -60 || p1.py > height + 60) continue;
+
+        for (let j = i + 1; j < projected.length; j++) {
+          const p2 = projected[j];
+          const dx = p1.point.x - p2.point.x;
+          const dy = p1.point.y - p2.point.y;
+          const dz = p1.point.z - p2.point.z;
+          const dist3D = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+          if (dist3D < 320) {
+            const alpha = (1 - dist3D / 320) * 0.28 * Math.min(1, p1.scale);
             ctx.beginPath();
-            ctx.moveTo(particles[i].x, particles[i].y);
-            ctx.lineTo(particles[j].x, particles[j].y);
-            ctx.strokeStyle = `rgba(59, 110, 255, ${0.22 * (1 - dist / 120)})`;
-            ctx.lineWidth = 0.8;
+            ctx.moveTo(p1.px, p1.py);
+            ctx.lineTo(p2.px, p2.py);
+            ctx.strokeStyle = `rgba(59, 110, 255, ${alpha})`;
+            ctx.lineWidth = 0.9 * p1.scale;
             ctx.stroke();
           }
         }
 
-        if (mouse.x && mouse.y) {
-          const mdx = particles[i].x - mouse.x;
-          const mdy = particles[i].y - mouse.y;
-          const mdist = Math.sqrt(mdx * mdx + mdy * mdy);
+        // Nodo 3D con resplandor neón proporcional a la profundidad (Z)
+        const r = p1.point.baseRadius * p1.scale;
+        const alphaNode = Math.min(0.9, 0.35 + p1.scale * 0.5);
 
-          if (mdist < 140) {
-            ctx.beginPath();
-            ctx.moveTo(particles[i].x, particles[i].y);
-            ctx.lineTo(mouse.x, mouse.y);
-            ctx.strokeStyle = `rgba(110, 147, 255, ${0.35 * (1 - mdist / 140)})`;
-            ctx.lineWidth = 1;
-            ctx.stroke();
-          }
-        }
+        ctx.beginPath();
+        ctx.arc(p1.px, p1.py, Math.max(0.6, r), 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(110, 147, 255, ${alphaNode})`;
+        ctx.shadowColor = 'rgba(59, 110, 255, 0.85)';
+        ctx.shadowBlur = 10 * p1.scale;
+        ctx.fill();
+        ctx.shadowBlur = 0;
       }
 
       requestAnimationFrame(animate);
